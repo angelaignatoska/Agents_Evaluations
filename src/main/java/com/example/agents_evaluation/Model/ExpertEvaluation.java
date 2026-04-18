@@ -7,6 +7,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Entity
 @Getter
 @Setter
@@ -29,6 +31,12 @@ public class ExpertEvaluation {
 
     private String explanation;
 
-    private boolean isInitial; //true prvicno, false po diskusija
+    @ElementCollection
+    private List<String> keyConsiderations;
+
+    // dali agentot se predomislil vo diskusija
+    private String positionChange; // MAINTAINED or CHANGED
+
+    private int roundNumber;
 
 }
