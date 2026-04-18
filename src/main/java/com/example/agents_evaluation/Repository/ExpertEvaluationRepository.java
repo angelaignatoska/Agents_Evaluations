@@ -1,3 +1,4 @@
+
 package com.example.agents_evaluation.Repository;
 
 import com.example.agents_evaluation.Model.ExpertEvaluation;
@@ -14,3 +15,5 @@ public interface ExpertEvaluationRepository extends JpaRepository<ExpertEvaluati
     List<ExpertEvaluation> fingByIdAndisInitial(Long id, String positionChanged); //gi filtrira finalnite
 
 }
+
+
