@@ -8,6 +8,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -39,8 +40,8 @@ public class DataInitializer {
 
                         Ingredient ingredient = new Ingredient();
                         ingredient.setIngredientName(cleanQuotes(data[1]));
-                        ingredient.setOption1(data.length > 2 ? cleanQuotes(data[2]) : "");
-                        ingredient.setOption2(data.length > 3 ? cleanQuotes(data[3]) : "");
+                        ingredient.setOption_1(data.length > 2 ? cleanQuotes(data[2]) : "");
+                        ingredient.setOption_2(data.length > 3 ? cleanQuotes(data[3]) : "");
 
                         ingredients.add(ingredient);
                     }

@@ -5,12 +5,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface ExpertEvaluationRepository extends JpaRepository<ExpertEvaluation, Long> {
-    Optional<ExpertEvaluation> findById(Long id); //gi zema site mislenja za konkretna sostojka
 
-    List<ExpertEvaluation> fingByIdAndisInitial(Long id, String positionChanged); //gi filtrira finalnite
+    List<ExpertEvaluation> findByIngredientIdAndRoundNumber(Long ingredientId, int roundNumber);
 
+    List<ExpertEvaluation> findByIngredientIdAndPositionChange(Long ingredientId, String positionChange);
 }
