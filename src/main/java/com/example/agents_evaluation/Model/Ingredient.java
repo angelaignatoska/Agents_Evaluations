@@ -28,6 +28,23 @@ public class Ingredient {
     @OneToOne
     private SupremeDecision finalDecision;
 
+    private String initialAgreement;
+    private String finalAgreement;
+    private int discussionRounds;
+    private String finalChoice;
+    private String confidence;
+    private String reasoning;
+
+    private String nutritionistInitial;
+    private String medicalDoctorInitial;
+    private String chefInitial;
+    private String foodScientistInitial;
+
+    private String nutritionistFinal;
+    private String medicalDoctorFinal;
+    private String chefFinal;
+    private String foodScientistFinal;
+
 
     public Ingredient(String ingredientName, String option1, String option2) {
         this.ingredientName = ingredientName;

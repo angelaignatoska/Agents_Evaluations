@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Ingredient Mappings</title>
+    <title>Ingredient Mappings & AI Evaluation</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -151,10 +151,113 @@
             line-height: 1.5;
         }
 
+        /* Насловни класи за секциите */
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 28px;
+            margin-bottom: 14px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #edf2f7;
+        }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .agent-mini-card {
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .agent-name {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 6px;
+        }
+
+        .vote-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 6px;
+        }
+
+        .badge-opt1 { background: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
+        .badge-opt2 { background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }
+        .badge-both { background: #faf5ff; color: #6b46c1; border: 1px solid #e9d8fd; }
+        .badge-none { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+
+        .discussion-box {
+            background: #fffaf0;
+            border: 1.5px solid #feebc8;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+        }
+
+        .chat-bubble {
+            font-size: 0.92rem;
+            line-height: 1.5;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            background: white;
+            border-left: 3.5px solid #cbd5e0;
+        }
+
+        .chat-bubble.changed {
+            border-left-color: #dd6b20;
+            background: #fffaf0;
+        }
+
         .option-card .empty {
             font-size: 0.9rem;
             color: #a0aec0;
             font-style: italic;
+        }
+
+        .supreme-box {
+            background: #1a202c;
+            color: white;
+            border-radius: 10px;
+            padding: 24px;
+            margin-top: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .supreme-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #f6ad55;
+            margin-bottom: 12px;
+        }
+        .supreme-reasoning {
+            font-size: 0.92rem;
+            line-height: 1.6;
+            color: #e2e8f0;
+            margin-bottom: 16px;
+            font-style: italic;
+        }
+
+        .supreme-meta{
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #a0aec0;
+            border-top: 1px solid #4a5568;
+            padding-top: 10px;
         }
 
         #loadingSpinner {
@@ -165,8 +268,13 @@
             font-size: 0.95rem;
         }
 
+        @media (max-width: 768px) {
+            .agents-grid { grid-template-columns: 1fr 1fr; }
+        }
+
         @media (max-width: 540px) {
             .options-grid { grid-template-columns: 1fr; }
+            .agents-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -181,10 +289,8 @@
     <div class="search-block">
         <label for="ingredientSearch">Ingredients List</label>
 
-        <!-- Search box -->
         <input type="text" id="ingredientSearch" placeholder="Search an ingredient..."/>
 
-        <!-- Select list -->
         <select id="ingredientSelect" size="8">
             <option th:each="name : ${ingredientNames}"
                     th:value="${name}"
@@ -193,7 +299,7 @@
         </select>
     </div>
 
-    <div id="loadingSpinner">⏳ Се вчитуваат опциите...</div>
+    <div id="loadingSpinner">Loading options...</div>
 
     <div id="optionsPanel">
         <h2>Mapping Options</h2>
@@ -208,6 +314,25 @@
                 <div class="value" id="opt2Value"></div>
             </div>
         </div>
+
+        <div class="section-title">Expert's initial opinion</div>
+        <div class="agents-grid" id="initialVotes"></div>
+
+        <div class="section-title">Discussion of opinions</div>
+        <div class="discussion-box">
+            <div id="discussionRoundsCount" style="font-size: 0.85rem; color: #dd6b20; font-weight: 700; margin-bottom: 10px;"></div>
+            <div id="chat"></div>
+        </div>
+
+        <div class="section-title">Final decision</div>
+        <div class="supreme-box">
+            <div class="supreme-title" id="supremeChoice"></div>
+            <div class="supreme-reasoning" id="supremeReasoning"></div>
+            <div class="supreme-meta">
+                <div>Confidence: <span id="supremeConfidence" style="color: #63b3ed; font-weight: 700;"></span></div>
+                <div>Agreement: <span id="supremeAgreement" style="color: #63b3ed; font-weight: 700;"></span></div>
+            </div>
+        </div>
     </div>
 
 </div>
@@ -220,6 +345,14 @@
     const selectedName = document.getElementById('selectedName');
     const opt1Value    = document.getElementById('opt1Value');
     const opt2Value    = document.getElementById('opt2Value');
+
+    const initialVotesGrid      = document.getElementById('initialVotes');
+    const discussionRoundsCount = document.getElementById('discussionRoundsCount');
+    const chatArena             = document.getElementById('chat');
+    const supremeChoice         = document.getElementById('supremeChoice');
+    const supremeReasoning      = document.getElementById('supremeReasoning');
+    const supremeConfidence     = document.getElementById('supremeConfidence');
+    const supremeAgreement     = document.getElementById('supremeAgreement');
 
     // Зачувај ги сите оригинални options
     const allOptions = Array.from(selectEl.options).map(o => ({
@@ -255,6 +388,15 @@
         if (selectEl.value) fetchOptions(selectEl.value);
     });
 
+    // Помошна функција за динамичко боење на беџовите на агентите
+    function getBadgeClass(vote) {
+        if (!vote) return 'badge-none';
+        if (vote.includes('OPTION_1')) return 'badge-opt1';
+        if (vote.includes('OPTION_2')) return 'badge-opt2';
+        if (vote.includes('BOTH')) return 'badge-both';
+        return 'badge-none';
+    }
+
     // AJAX повик
     function fetchOptions(name) {
         optionsPanel.style.display = 'none';
@@ -264,15 +406,65 @@
             .then(r => r.json())
             .then(data => {
                 loadingEl.style.display = 'none';
-                selectedName.textContent = data.name;
+
+                // Справување со името на состојката
+                selectedName.textContent = data.ingredientName || data.ingredient || data.name || name;
 
                 opt1Value.innerHTML = data.option1 || data.option_1
+
                     ? (data.option1 || data.option_1)
+
                     : '<span class="empty">Нема option 1</span>';
 
+
+
                 opt2Value.innerHTML = data.option2 || data.option_2
+
                     ? (data.option2 || data.option_2)
+
                     : '<span class="empty">Нема option 2</span>';
+
+                // Наместен е точниот назив на медицинскиот доктор (medicalDoctorFinal)
+                const agentsList = [
+                    {label: 'Nutritionist', initial: data.nutritionistInitial, final: data.nutritionistFinal},
+                    {label: 'Doctor', initial: data.medicalDoctorInitial, final: data.medicalDoctorFinal},
+                    {label: 'Chef', initial: data.chefInitial, final: data.chefFinal},
+                    {label: 'Scientist', initial: data.foodScientistInitial, final: data.foodScientistFinal}
+                ];
+
+                // Етапа 1: Почетни мислења (Сменети се обичните наводници со Backticks `)
+                let gridHtml = '';
+                agentsList.forEach(a => {
+                    gridHtml += `<div class="agent-mini-card">
+                                    <div class="agent-name">${a.label}</div>
+                                    <span class="vote-badge ${getBadgeClass(a.initial)}">${a.initial || 'NONE'}</span>
+                                </div>`;
+                });
+                initialVotesGrid.innerHTML = gridHtml;
+
+                // Рунди на дискусија текст
+                discussionRoundsCount.textContent = `TOTAL ROUNDS OF DEBATE: ${data.discussionRounds ?? 0}`;
+
+                // Етапа 2: Дискусија (Сменети се обичните наводници со Backticks `)
+                let chatHtml = '';
+                agentsList.forEach(a => {
+                    if (a.initial !== a.final) {
+                        chatHtml += `<div class="chat-bubble changed">
+                                        <strong>${a.label}: </strong> I changed my opinion after the discussion. My first choice was <span class="vote-badge ${getBadgeClass(a.initial)}" style="font-size:0.75rem;">${a.initial}</span>, but now I agree with the arguments for <span class="vote-badge ${getBadgeClass(a.final)}" style="font-size:0.75rem;">${a.final}</span>.
+                                    </div>`;
+                    } else {
+                        chatHtml += `<div class="chat-bubble">
+                                        <strong>${a.label}: </strong> I stand by my initial assessment for <span class="vote-badge ${getBadgeClass(a.initial)}" style="font-size:0.75rem;">${a.initial || 'NONE'}</span>.
+                                    </div>`;
+                    }
+                });
+                chatArena.innerHTML = chatHtml;
+
+                // Етапа 3: Финална одлука (Точни мапирања од твојот Java модел)
+                supremeChoice.textContent = `🏆 Winner: ${data.finalChoice || 'Undecided'}`;
+                supremeReasoning.textContent = data.reasoning || "No detailed reasoning provided.";
+                supremeConfidence.textContent = data.confidence || "N/A";
+                supremeAgreement.textContent = data.finalAgreement || data.initialAgreement || "Split";
 
                 optionsPanel.style.display = 'block';
             })
@@ -282,7 +474,6 @@
             });
     }
 </script>
-
 
 </body>
 </html>
