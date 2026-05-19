@@ -1,3 +1,4 @@
+
 package com.example.agents_evaluation.Repository;
 
 import com.example.agents_evaluation.Model.Ingredient;
@@ -9,3 +10,4 @@ public interface IngredientRepository extends JpaRepository<Ingredient, Long> {
 
     Optional<Ingredient> findIngredientByName(String name);
 }
+
