@@ -151,7 +151,7 @@
             line-height: 1.5;
         }
 
-        /* Насловни класи за секциите */
+
         .section-title {
             font-size: 0.9rem;
             font-weight: 700;
@@ -276,6 +276,15 @@
             .options-grid { grid-template-columns: 1fr; }
             .agents-grid { grid-template-columns: 1fr; }
         }
+        .supreme-box {
+            display: none; /* Се крие автоматски додека не стигнеш до последната рунда */
+        }
+        #prevBtn, #nextBtn{
+            padding: 10px;
+            font-family: "Lucida Sans";
+            background-color: rgba(251, 227, 99, 0.68);
+            border-radius: 15px;
+        }
     </style>
 </head>
 <body>
@@ -322,10 +331,17 @@
         <div class="discussion-box">
             <div id="discussionRoundsCount" style="font-size: 0.85rem; color: #dd6b20; font-weight: 700; margin-bottom: 10px;"></div>
             <div id="chat"></div>
+            <div id="navigationControls" style="display: none; margin-top: 15px; text-align: center;">
+                <button id="prevBtn" onclick="changeRound(-1)">Back</button>
+                <button id="nextBtn" onclick="changeRound(1)">Next Round</button>
+            </div>
         </div>
 
         <div class="section-title">Final decision</div>
         <div class="supreme-box">
+            <div class="section-title" style="color: #cbd5e0;">Final Expert Opinion</div>
+            <div class="agents-grid" id="finalVotes"></div>
+
             <div class="supreme-title" id="supremeChoice"></div>
             <div class="supreme-reasoning" id="supremeReasoning"></div>
             <div class="supreme-meta">
@@ -339,28 +355,28 @@
 
 <script>
     const searchInput  = document.getElementById('ingredientSearch');
-    const selectEl     = document.getElementById('ingredientSelect');
+    const selectEl = document.getElementById('ingredientSelect');
     const optionsPanel = document.getElementById('optionsPanel');
-    const loadingEl    = document.getElementById('loadingSpinner');
+    const loadingEl = document.getElementById('loadingSpinner');
     const selectedName = document.getElementById('selectedName');
-    const opt1Value    = document.getElementById('opt1Value');
-    const opt2Value    = document.getElementById('opt2Value');
+    const opt1Value = document.getElementById('opt1Value');
+    const opt2Value = document.getElementById('opt2Value');
 
-    const initialVotesGrid      = document.getElementById('initialVotes');
+    const initialVotesGrid = document.getElementById('initialVotes');
     const discussionRoundsCount = document.getElementById('discussionRoundsCount');
-    const chatArena             = document.getElementById('chat');
-    const supremeChoice         = document.getElementById('supremeChoice');
-    const supremeReasoning      = document.getElementById('supremeReasoning');
-    const supremeConfidence     = document.getElementById('supremeConfidence');
-    const supremeAgreement     = document.getElementById('supremeAgreement');
+    const chatArena = document.getElementById('chat');
+    const supremeChoice = document.getElementById('supremeChoice');
+    const supremeReasoning = document.getElementById('supremeReasoning');
+    const supremeConfidence = document.getElementById('supremeConfidence');
+    const supremeAgreement = document.getElementById('supremeAgreement');
 
-    // Зачувај ги сите оригинални options
+
     const allOptions = Array.from(selectEl.options).map(o => ({
         value: o.value,
         text: o.text
     }));
 
-    // Пребарување / Филтер
+    //search filter
     searchInput.addEventListener('input', () => {
         const q = searchInput.value.toLowerCase().trim();
         selectEl.innerHTML = '';
@@ -383,12 +399,12 @@
         }
     });
 
-    // Избор од листата
+   //choosing
     selectEl.addEventListener('change', () => {
         if (selectEl.value) fetchOptions(selectEl.value);
     });
 
-    // Помошна функција за динамичко боење на беџовите на агентите
+    //boenje
     function getBadgeClass(vote) {
         if (!vote) return 'badge-none';
         if (vote.includes('OPTION_1')) return 'badge-opt1';
@@ -397,17 +413,26 @@
         return 'badge-none';
     }
 
-    // AJAX повик
+    let currentRound = 1;
+    let allRounds = []
+    let currentFinalVotes = '';
+
     function fetchOptions(name) {
         optionsPanel.style.display = 'none';
         loadingEl.style.display    = 'block';
+
 
         fetch(`/ingredients/options?name=${encodeURIComponent(name)}`)
             .then(r => r.json())
             .then(data => {
                 loadingEl.style.display = 'none';
 
-                // Справување со името на состојката
+                allRounds = data.discussionHistory || [];
+                currentRound = 1;
+
+                renderRound();
+
+                //ime na sostojka so option
                 selectedName.textContent = data.ingredientName || data.ingredient || data.name || name;
 
                 opt1Value.innerHTML = data.option1 || data.option_1
@@ -424,7 +449,7 @@
 
                     : '<span class="empty">Нема option 2</span>';
 
-                // Наместен е точниот назив на медицинскиот доктор (medicalDoctorFinal)
+
                 const agentsList = [
                     {label: 'Nutritionist', initial: data.nutritionistInitial, final: data.nutritionistFinal},
                     {label: 'Doctor', initial: data.medicalDoctorInitial, final: data.medicalDoctorFinal},
@@ -432,7 +457,7 @@
                     {label: 'Scientist', initial: data.foodScientistInitial, final: data.foodScientistFinal}
                 ];
 
-                // Етапа 1: Почетни мислења (Сменети се обичните наводници со Backticks `)
+                // Etapa 1 pocetni mislenja
                 let gridHtml = '';
                 agentsList.forEach(a => {
                     gridHtml += `<div class="agent-mini-card">
@@ -442,26 +467,35 @@
                 });
                 initialVotesGrid.innerHTML = gridHtml;
 
-                // Рунди на дискусија текст
+                let finalHtml = '';
+                agentsList.forEach(a => {
+                    const hasChanged = a.initial !== a.final && a.final !== null;
+                    finalHtml += `<div class="agent-mini-card ${hasChanged ? 'changed' : ''}">
+                    <div class="agent-name">${a.label}</div>
+                    <span class="vote-badge ${getBadgeClass(a.final)}">${a.final || 'NONE'}</span>
+                    ${hasChanged ? '<div style="font-size:0.6rem; color:#dd6b20; margin-top:4px;">CHANGED</div>' : ''}
+                  </div>`;
+                });
+                currentFinalVotes = finalHtml;
+
+                //rundi
                 discussionRoundsCount.textContent = `TOTAL ROUNDS OF DEBATE: ${data.discussionRounds ?? 0}`;
 
-                // Етапа 2: Дискусија (Сменети се обичните наводници со Backticks `)
-                let chatHtml = '';
-                agentsList.forEach(a => {
-                    if (a.initial !== a.final) {
-                        chatHtml += `<div class="chat-bubble changed">
-                                        <strong>${a.label}: </strong> I changed my opinion after the discussion. My first choice was <span class="vote-badge ${getBadgeClass(a.initial)}" style="font-size:0.75rem;">${a.initial}</span>, but now I agree with the arguments for <span class="vote-badge ${getBadgeClass(a.final)}" style="font-size:0.75rem;">${a.final}</span>.
-                                    </div>`;
-                    } else {
-                        chatHtml += `<div class="chat-bubble">
-                                        <strong>${a.label}: </strong> I stand by my initial assessment for <span class="vote-badge ${getBadgeClass(a.initial)}" style="font-size:0.75rem;">${a.initial || 'NONE'}</span>.
-                                    </div>`;
-                    }
-                });
-                chatArena.innerHTML = chatHtml;
+                //etapa 2 diskusija
+                // let chatHtml = ''
+                //
+                // if(data.discussionHistory && data.discussionHistory.length > 0){
+                //     data.discussionHistory.forEach(round => {
+                //        chatHtml += `<div class="chat-bubble"><span style="color: #4a5568; font-size: 0.75rem; font-weight: 700;">ROUND ${round.roundNumber}</span><br><strong>${round.agentName}:</strong> ${round.message}</div>`;
+                //     });
+                // }else{
+                //     chatHtml = `<div class="chat-bubble">No round history founded.</div>`
+                // }
+                //
+                // chatArena.innerHTML = chatHtml;
 
-                // Етапа 3: Финална одлука (Точни мапирања од твојот Java модел)
-                supremeChoice.textContent = `🏆 Winner: ${data.finalChoice || 'Undecided'}`;
+                // etapa 3 finalna odluka
+                supremeChoice.textContent = `Winner: ${data.finalChoice || 'Undecided'}`;
                 supremeReasoning.textContent = data.reasoning || "No detailed reasoning provided.";
                 supremeConfidence.textContent = data.confidence || "N/A";
                 supremeAgreement.textContent = data.finalAgreement || data.initialAgreement || "Split";
@@ -472,6 +506,44 @@
                 loadingEl.style.display = 'none';
                 console.error('Грешка:', err);
             });
+    }
+
+    function renderRound(){
+        const roundData = allRounds.filter(r => r.roundNumber === currentRound);
+        let html = '';
+
+        if(roundData.length > 0){
+            roundData.forEach(r => {
+                html += `<div class="chat-bubble"><strong>${r.agentName}:</strong> ${r.message}</div>`;
+            });
+        } else {
+            html = `<div class="chat-bubble">No history for this round</div>`
+        }
+
+        chatArena.innerHTML = `<h3>Round ${currentRound}</h3>` + html;
+
+        document.getElementById('navigationControls').style.display = 'block';
+        updateControls();
+    }
+
+    function changeRound(step){
+        currentRound += step;
+        renderRound();
+    }
+
+    function updateControls(){
+        const maxRound = Math.max(...allRounds.map(r => r.roundNumber), 1);
+
+        document.getElementById('prevBtn').disabled = (currentRound <= 1);
+        document.getElementById('nextBtn').disabled = (currentRound >= maxRound);
+
+        const supremeBox = document.querySelector('.supreme-box');
+        if(currentRound >= maxRound){
+            supremeBox.style.display = 'block';
+            document.getElementById('finalVotes').innerHTML = currentFinalVotes;
+        }else{
+            supremeBox.style.display = 'none';
+        }
     }
 </script>
 

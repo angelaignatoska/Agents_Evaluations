@@ -7,6 +7,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Setter
 @Getter
 @Entity
@@ -45,10 +48,14 @@ public class Ingredient {
     private String chefFinal;
     private String foodScientistFinal;
 
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    private List<DiscussionRound> discussionHistory = new ArrayList<>();
 
     public Ingredient(String ingredientName, String option1, String option2) {
         this.ingredientName = ingredientName;
         this.option_1 = option1;
         this.option_2 = option2;
     }
+
+
 }

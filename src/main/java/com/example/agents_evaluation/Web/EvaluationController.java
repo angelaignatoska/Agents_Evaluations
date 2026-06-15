@@ -1,6 +1,7 @@
 package com.example.agents_evaluation.Web;
 
 import com.example.agents_evaluation.Model.Ingredient;
+import com.example.agents_evaluation.Repository.Impl.IngredientFileRepository;
 import com.example.agents_evaluation.Repository.IngredientRepository;
 import com.example.agents_evaluation.Service.IngredientService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,9 @@ public class EvaluationController {
     @Autowired
     private IngredientService ingredientService;
 
+    @Autowired
+    private IngredientFileRepository repository;
+
     @GetMapping
     public String showIngredients(Model model){
         List<String> ingredientNames = ingredientService.getAllIngredientNames();
@@ -27,6 +31,14 @@ public class EvaluationController {
     @GetMapping("/options")
     @ResponseBody
     public Ingredient getOptions(@RequestParam("name") String name) {
-        return ingredientService.getOptionsByName(name);
+         ingredientService.getOptionsByName(name);
+
+        Ingredient ing = repository.findAll().stream()
+                .filter(i -> i.getIngredientName().equalsIgnoreCase(name))
+                .findFirst()
+                .orElse(null);
+
+        System.out.println("Debug: Се враќа состојка со историја: " + (ing != null ? ing.getDiscussionHistory() : "NULL"));
+        return ing;
     }
 }
