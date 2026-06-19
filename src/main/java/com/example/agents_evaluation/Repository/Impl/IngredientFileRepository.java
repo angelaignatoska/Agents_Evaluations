@@ -64,11 +64,10 @@ public class IngredientFileRepository implements FileReader {
 
                 if (items != null) {
                     for (JsonNode node : items) {
-                        // Внатре во циклусот for (JsonNode node : items)
                         String name = node.get("ingredient").asText().trim();
                         Ingredient ingredient = ingredientMap.getOrDefault(name.toLowerCase(), new Ingredient(name, null, null));
 
-// 1. Пополни Supreme Decision
+                        // 1. Supreme Decision info
                         if (node.has("supreme_decision")) {
                             JsonNode supreme = node.get("supreme_decision");
                             ingredient.setFinalChoice(supreme.path("final_choice").asText("Undecided"));
@@ -76,27 +75,25 @@ public class IngredientFileRepository implements FileReader {
                             ingredient.setConfidence(supreme.path("confidence").asText("N/A"));
                         }
 
-// 2. Пополни Final Agreement (од final_consensus)
+                        // 2. Final info
                         if (node.has("final_consensus")) {
                             ingredient.setFinalAgreement(node.get("final_consensus").path("agreement_level").asText("Split"));
                         }
 
-// 3. Дискусија - ова е многу важно!
-// Според твојот JSON, discussion_history е листа од листи (бидејќи имаш загради [ [ ... ] ])
+                        // 3. Discussion rounds
                         List<DiscussionRound> history = new ArrayList<>();
-                        int roundCounter = 1; // Почни од 1
+                        int roundCounter = 1; //fix ima edna runda sekako
 
                         if (node.has("discussion_history") && node.get("discussion_history").isArray()) {
                             for (JsonNode roundGroup : node.get("discussion_history")) {
-                                // Ова е една група на дискусија
                                 for (JsonNode roundNode : roundGroup) {
                                     String agent = roundNode.path("expert_role").asText("Unknown");
                                     String message = roundNode.path("response_to_colleagues").asText(roundNode.path("explanation").asText(""));
 
-                                    // Користи го roundCounter наместо 0
+
                                     history.add(new DiscussionRound(agent, message, roundCounter));
                                 }
-                                roundCounter++; // Зголеми ја рундата откако ќе ја завршиш групата
+                                roundCounter++;
                             }
                         }
                         ingredient.setDiscussionHistory(history);

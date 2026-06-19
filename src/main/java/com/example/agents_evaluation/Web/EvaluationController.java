@@ -38,7 +38,7 @@ public class EvaluationController {
                 .findFirst()
                 .orElse(null);
 
-        System.out.println("Debug: Се враќа состојка со историја: " + (ing != null ? ing.getDiscussionHistory() : "NULL"));
+        System.out.println("Debug: Ingredient " + (ing != null ? ing.getDiscussionHistory() : "NULL"));
         return ing;
     }
 }
